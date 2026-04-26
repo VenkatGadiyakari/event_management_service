@@ -16,15 +16,15 @@ import java.util.UUID;
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
 
-    @Query("SELECT e FROM Event e WHERE e.status = :status AND e.eventDate > :now " +
+    Page<Event> findByOrganiserIdOrderByCreatedAtDesc(UUID organiserId, Pageable pageable);
+
+    @Query("SELECT e FROM Event e WHERE e.status = :status " +
             "AND (:category IS NULL OR e.category = :category) " +
             "AND (:city IS NULL OR e.venue.city = :city) " +
-            "AND (:search IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:search IS NULL OR LOWER(e.title) LIKE :search OR LOWER(e.description) LIKE :search) " +
             "ORDER BY e.eventDate ASC")
     Page<Event> findPublishedEvents(
             @Param("status") EventStatus status,
-            @Param("now") LocalDateTime now,
             @Param("category") EventCategory category,
             @Param("city") String city,
             @Param("search") String search,

@@ -269,15 +269,43 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<EventDetailResponse> getOrganiserEvents(UUID organiserId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Event> eventPage = eventRepository.findByOrganiserIdOrderByCreatedAtDesc(organiserId, pageable);
+
+        List<EventDetailResponse> content = eventPage.getContent().stream()
+                .map(this::toEventDetailResponse)
+                .collect(Collectors.toList());
+
+        return new PageResponse<>(
+                content,
+                eventPage.getNumber(),
+                eventPage.getSize(),
+                eventPage.getTotalElements(),
+                eventPage.getTotalPages()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public EventDetailResponse getOrganiserEvent(UUID eventId, UUID organiserId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
+
+        validateEventOwnership(event, organiserId);
+
+        return toEventDetailResponse(event);
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<EventSummaryResponse> browseEvents(EventCategory category, String city, String search,
                                                            int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
+        String searchPattern = (search != null && !search.isBlank()) ? "%" + search.toLowerCase() + "%" : null;
         Page<Event> eventPage = eventRepository.findPublishedEvents(
                 EventStatus.PUBLISHED,
-                LocalDateTime.now(),
                 category,
                 city,
-                search,
+                searchPattern,
                 pageable
         );
 
